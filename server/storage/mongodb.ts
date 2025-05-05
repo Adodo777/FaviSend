@@ -1,7 +1,14 @@
 import { IStorage } from '../storage';
-import { User, File, Download, Comment, Payment } from '../models/mongoose';
+import { User as UserModel, File as FileModel, Download as DownloadModel, Comment as CommentModel, Payment as PaymentModel } from '../models/mongoose';
 import bcrypt from 'bcrypt';
 import { generateUniqueId } from '../utils';
+
+// Déclaration module pour bcrypt
+declare module 'bcrypt' {
+  export function genSalt(rounds?: number): Promise<string>;
+  export function hash(data: string, salt: string): Promise<string>;
+  export function compare(data: string, encrypted: string): Promise<boolean>;
+}
 
 export class MongooseStorage implements IStorage {
   constructor() {
@@ -11,7 +18,15 @@ export class MongooseStorage implements IStorage {
   // Gestion des utilisateurs
   async getUser(id: number): Promise<any | undefined> {
     try {
-      return await User.findById(id);
+      return await UserModel.findById(id);
+    } catch (error) {
+      return undefined;
+    }
+  }
+
+  async getUserByFirebaseUid(uid: string): Promise<any | undefined> {
+    try {
+      return await UserModel.findOne({ uid });
     } catch (error) {
       return undefined;
     }
@@ -19,7 +34,7 @@ export class MongooseStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<any | undefined> {
     try {
-      return await User.findOne({ username });
+      return await UserModel.findOne({ username });
     } catch (error) {
       return undefined;
     }
@@ -32,13 +47,13 @@ export class MongooseStorage implements IStorage {
       userData.password = await bcrypt.hash(userData.password, salt);
     }
 
-    const user = new User(userData);
+    const user = new UserModel(userData);
     return await user.save();
   }
 
   async updateUserBalance(userId: number, amount: number): Promise<any | undefined> {
     try {
-      return await User.findByIdAndUpdate(
+      return await UserModel.findByIdAndUpdate(
         userId,
         { $inc: { balance: amount }, updatedAt: new Date() },
         { new: true }
@@ -51,7 +66,7 @@ export class MongooseStorage implements IStorage {
   // Gestion des fichiers
   async getFile(id: number): Promise<any | undefined> {
     try {
-      return await File.findById(id);
+      return await FileModel.findById(id);
     } catch (error) {
       return undefined;
     }
@@ -59,7 +74,7 @@ export class MongooseStorage implements IStorage {
 
   async getFileByShareUrl(shareUrl: string): Promise<any | undefined> {
     try {
-      return await File.findOne({ shareUrl });
+      return await FileModel.findOne({ shareUrl });
     } catch (error) {
       return undefined;
     }
@@ -67,14 +82,14 @@ export class MongooseStorage implements IStorage {
 
   async getUserFiles(userId: number): Promise<any[]> {
     try {
-      return await File.find({ userId }).sort({ createdAt: -1 });
+      return await FileModel.find({ userId }).sort({ createdAt: -1 });
     } catch (error) {
       return [];
     }
   }
 
   async createFile(fileData: any, userId: number): Promise<any> {
-    const newFile = new File({
+    const newFile = new FileModel({
       ...fileData,
       userId,
       shareUrl: generateUniqueId(10)
@@ -84,7 +99,7 @@ export class MongooseStorage implements IStorage {
 
   async updateFile(id: number, data: any): Promise<any | undefined> {
     try {
-      return await File.findByIdAndUpdate(
+      return await FileModel.findByIdAndUpdate(
         id,
         { ...data, updatedAt: new Date() },
         { new: true }
@@ -96,7 +111,7 @@ export class MongooseStorage implements IStorage {
 
   async deleteFile(id: number): Promise<boolean> {
     try {
-      const result = await File.findByIdAndDelete(id);
+      const result = await FileModel.findByIdAndDelete(id);
       return !!result;
     } catch (error) {
       return false;
@@ -106,7 +121,7 @@ export class MongooseStorage implements IStorage {
   // Liste des fichiers
   async getPopularFiles(limit: number = 10): Promise<any[]> {
     try {
-      return await File.find().sort({ downloads: -1 }).limit(limit);
+      return await FileModel.find().sort({ downloads: -1 }).limit(limit);
     } catch (error) {
       return [];
     }
@@ -114,7 +129,7 @@ export class MongooseStorage implements IStorage {
 
   async getRecentFiles(limit: number = 10): Promise<any[]> {
     try {
-      return await File.find().sort({ createdAt: -1 }).limit(limit);
+      return await FileModel.find().sort({ createdAt: -1 }).limit(limit);
     } catch (error) {
       return [];
     }
@@ -122,7 +137,7 @@ export class MongooseStorage implements IStorage {
 
   async getTopRatedFiles(limit: number = 10): Promise<any[]> {
     try {
-      return await File.find().sort({ rating: -1 }).limit(limit);
+      return await FileModel.find().sort({ rating: -1 }).limit(limit);
     } catch (error) {
       return [];
     }

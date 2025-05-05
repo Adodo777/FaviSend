@@ -3,9 +3,11 @@ import {
   File, InsertFile,
   Download, InsertDownload,
   Comment, InsertComment,
-  Payment, InsertPayment,
-  users, files, downloads, comments, payments
+  Payment, InsertPayment
 } from "@shared/schema";
+import { MongooseStorage } from './storage/mongodb';
+import session from 'express-session';
+import MongoStore from 'connect-mongo';
 import { generateUniqueId } from "./utils";
 
 // Interface for all storage operations
@@ -298,5 +300,17 @@ export class MemStorage implements IStorage {
   }
 }
 
-// Export an instance of MemStorage
-export const storage = new MemStorage();
+// Création du store pour les sessions
+export const createSessionStore = () => {
+  const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/favisend';
+  return MongoStore.create({ mongoUrl: mongoURI });
+};
+
+// Utiliser MongooseStorage ou MemStorage en fonction de la configuration
+const useMongoDb = process.env.MONGODB_URI !== undefined;
+
+// Export du stockage approprié
+export const storage = useMongoDb ? new MongooseStorage() : new MemStorage();
+
+// Pour faciliter le développement, on garde une instance en mémoire disponible
+export const memStorage = new MemStorage();
