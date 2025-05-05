@@ -6,15 +6,15 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
-import { FcGoogle } from 'react-icons/fc';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const { user, signInWithGoogle } = useAuth();
+  const { user, login, register, error: authError, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [, navigate] = useLocation();
 
@@ -28,21 +28,20 @@ export default function AuthPage() {
     e.preventDefault();
     setError('');
     
-    if (!email || !password) {
+    if (!username || !password) {
       setError('Veuillez remplir tous les champs');
       return;
     }
     
-    setIsLoading(true);
     try {
-      // Implement email login when available
-      // await signInWithEmail(email, password);
-      await signInWithGoogle(); // Temporary use Google instead
-      navigate('/');
+      await login(username, password);
+      // La redirection sera gérée une fois que l'utilisateur est connecté
     } catch (err) {
-      setError('Identifiants incorrects');
-    } finally {
-      setIsLoading(false);
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Identifiants incorrects');
+      }
     }
   };
 
@@ -50,7 +49,7 @@ export default function AuthPage() {
     e.preventDefault();
     setError('');
     
-    if (!email || !password || !confirmPassword) {
+    if (!username || !email || !password || !confirmPassword) {
       setError('Veuillez remplir tous les champs');
       return;
     }
@@ -65,28 +64,15 @@ export default function AuthPage() {
       return;
     }
     
-    setIsLoading(true);
     try {
-      // Implement email registration when available
-      // await signUpWithEmail(email, password);
-      await signInWithGoogle(); // Temporary use Google instead
-      navigate('/');
+      await register(username, email, password);
+      // La redirection sera gérée une fois que l'utilisateur est connecté
     } catch (err) {
-      setError('Erreur lors de l\'inscription. Cet email est peut-être déjà utilisé.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    try {
-      await signInWithGoogle();
-      navigate('/');
-    } catch (err) {
-      setError('Erreur lors de la connexion avec Google');
-    } finally {
-      setIsLoading(false);
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Erreur lors de l\'inscription. Cet identifiant ou email est peut-être déjà utilisé.');
+      }
     }
   };
 

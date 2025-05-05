@@ -1,31 +1,35 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { 
-  User, 
-  signInWithPopup, 
-  signOut as firebaseSignOut, 
-  onAuthStateChanged,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword
-} from "firebase/auth";
-import { auth, googleProvider } from "./firebase";
 import { useToast } from "../hooks/use-toast";
+import { apiRequest, queryClient } from "./queryClient";
+
+// Définition du type utilisateur
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  displayName: string | null;
+  photoURL: string | null;
+  balance: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  signInWithGoogle: () => Promise<void>;
-  signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
+  error: Error | null;
+  login: (username: string, password: string) => Promise<void>;
+  register: (username: string, email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: true,
-  signInWithGoogle: async () => {},
-  signInWithEmail: async () => {},
-  signUpWithEmail: async () => {},
-  signOut: async () => {},
+  error: null,
+  login: async () => {},
+  register: async () => {},
+  logout: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -37,137 +41,143 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   const { toast } = useToast();
 
+  // Vérifie si l'utilisateur est connecté au chargement de l'application
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setIsLoading(false);
-    });
+    const checkAuth = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch("/api/auth/user", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include", // Important pour envoyer les cookies de session
+        });
 
-    return () => unsubscribe();
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+        } else {
+          setUser(null);
+        }
+      } catch (err) {
+        console.error("Erreur lors de la vérification de l'authentification:", err);
+        setUser(null);
+        setError(err instanceof Error ? err : new Error("Erreur d'authentification inconnue"));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
-  const signInWithGoogle = async () => {
+  const login = async (username: string, password: string) => {
     try {
-      const result = await signInWithPopup(auth, googleProvider);
+      setIsLoading(true);
+      const response = await apiRequest("POST", "/api/auth/login", { username, password });
       
-      // After successful sign-in, let's create or update the user in our backend
-      await fetch("/api/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          uid: result.user.uid,
-          email: result.user.email,
-          displayName: result.user.displayName,
-          photoURL: result.user.photoURL,
-        }),
-      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Échec de la connexion");
+      }
+      
+      const userData = await response.json();
+      setUser(userData);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
       toast({
         title: "Connecté avec succès",
         description: "Bienvenue sur FaviSend!",
       });
-    } catch (error) {
-      console.error("Error signing in with Google:", error);
+    } catch (err) {
+      console.error("Erreur de connexion:", err);
+      setError(err instanceof Error ? err : new Error("Erreur de connexion inconnue"));
       toast({
         variant: "destructive",
         title: "Échec de la connexion",
-        description: "Une erreur s'est produite lors de la connexion.",
+        description: err instanceof Error ? err.message : "Vérifiez vos identifiants et réessayez.",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const signInWithEmail = async (email: string, password: string) => {
+  const register = async (username: string, email: string, password: string) => {
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      
-      // After successful sign-in, let's create or update the user in our backend
-      await fetch("/api/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          uid: result.user.uid,
-          email: result.user.email,
-          displayName: result.user.displayName,
-          photoURL: result.user.photoURL,
-        }),
+      setIsLoading(true);
+      const response = await apiRequest("POST", "/api/auth/register", {
+        username,
+        email,
+        password,
       });
       
-      toast({
-        title: "Connecté avec succès",
-        description: "Bienvenue sur FaviSend!",
-      });
-    } catch (error) {
-      console.error("Error signing in with email:", error);
-      toast({
-        variant: "destructive",
-        title: "Échec de la connexion",
-        description: "Vérifiez vos identifiants et réessayez.",
-      });
-    }
-  };
-
-  const signUpWithEmail = async (email: string, password: string) => {
-    try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Échec de l'inscription");
+      }
       
-      // After successful sign-up, let's create the user in our backend
-      await fetch("/api/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          uid: result.user.uid,
-          email: result.user.email,
-          displayName: result.user.displayName,
-          photoURL: result.user.photoURL,
-        }),
-      });
+      const userData = await response.json();
+      setUser(userData);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       
       toast({
         title: "Compte créé avec succès",
         description: "Bienvenue sur FaviSend!",
       });
-    } catch (error) {
-      console.error("Error signing up with email:", error);
+    } catch (err) {
+      console.error("Erreur d'inscription:", err);
+      setError(err instanceof Error ? err : new Error("Erreur d'inscription inconnue"));
       toast({
         variant: "destructive",
         title: "Échec de l'inscription",
-        description: "Cet email est peut-être déjà utilisé ou votre mot de passe est trop faible.",
+        description: err instanceof Error ? err.message : "Cet identifiant ou email est peut-être déjà utilisé.",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const signOut = async () => {
+  const logout = async () => {
     try {
-      await firebaseSignOut(auth);
+      setIsLoading(true);
+      const response = await apiRequest("POST", "/api/auth/logout");
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Échec de la déconnexion");
+      }
+      
+      setUser(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
       toast({
         title: "Déconnecté avec succès",
         description: "À bientôt!",
       });
-    } catch (error) {
-      console.error("Error signing out:", error);
+    } catch (err) {
+      console.error("Erreur de déconnexion:", err);
+      setError(err instanceof Error ? err : new Error("Erreur de déconnexion inconnue"));
       toast({
         variant: "destructive",
         title: "Échec de la déconnexion",
         description: "Une erreur s'est produite lors de la déconnexion.",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const value = {
     user,
     isLoading,
-    signInWithGoogle,
-    signInWithEmail,
-    signUpWithEmail,
-    signOut
+    error,
+    login,
+    register,
+    logout
   };
 
   return (

@@ -1,5 +1,9 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
+import { MongoMemoryServer } from 'mongodb-memory-server';
+
+// Variable pour stocker l'instance MongoMemoryServer
+let mongoMemoryServer: MongoMemoryServer | null = null;
 
 // Schéma utilisateur
 const userSchema = new mongoose.Schema({
@@ -80,25 +84,39 @@ export const Payment = mongoose.models.Payment || mongoose.model('Payment', paym
 
 // Connection à MongoDB
 export async function connectToMongoDB() {
-  // Si on est en développement et que MONGODB_URI n'est pas défini, on utilise mongoose-memory-server
-  if (process.env.NODE_ENV === 'development' && !process.env.MONGODB_URI) {
-    console.log('Utilisation de la base de données en mémoire pour le développement');
-    // Pour le développement, on utilise une base en mémoire
-    return mongoose.createConnection('mongodb://localhost:27017/favisend');
+  // Utilisation de MongoMemoryServer pour le développement par défaut dans Replit
+  if (process.env.NODE_ENV === 'development' || !process.env.MONGODB_URI) {
+    try {
+      console.log('Initialisation de la base de données MongoDB en mémoire...');
+      
+      // Création de l'instance MongoMemoryServer si elle n'existe pas encore
+      if (!mongoMemoryServer) {
+        mongoMemoryServer = await MongoMemoryServer.create();
+        const mongoUri = mongoMemoryServer.getUri();
+        console.log(`URI MongoDB en mémoire: ${mongoUri}`);
+        
+        // Connexion à la base en mémoire
+        await mongoose.connect(mongoUri);
+        console.log('Connecté à la base MongoDB en mémoire');
+      } else {
+        console.log('Utilisation de l\'instance MongoDB en mémoire existante');
+      }
+      
+      return mongoose.connection;
+    } catch (memoryError) {
+      console.error('Erreur avec MongoDB en mémoire:', memoryError);
+      throw memoryError; // Ré-émission de l'erreur
+    }
   }
 
+  // Pour la production, on utilise l'URI MongoDB fourni
   try {
-    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/favisend';
-    // Définition d'un timeout court pour la connexion
-    await mongoose.connect(mongoURI, {
-      serverSelectionTimeoutMS: 5000, // 5 secondes de timeout
-    });
-    console.log('Connecté à MongoDB');
+    const mongoURI = process.env.MONGODB_URI as string;
+    await mongoose.connect(mongoURI);
+    console.log('Connecté à MongoDB (production)');
     return mongoose.connection;
   } catch (error) {
-    console.error('Erreur de connexion à MongoDB:', error);
-    // En cas d'erreur, on retourne une connexion en mémoire pour le développement
-    console.log('Fallback vers une base en mémoire');
-    return mongoose.createConnection('mongodb://localhost:27017/favisend');
+    console.error('Erreur de connexion à MongoDB (production):', error);
+    throw error; // Ré-émission de l'erreur pour la gestion en amont
   }
 }
