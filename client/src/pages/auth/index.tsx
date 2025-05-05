@@ -99,13 +99,13 @@ export default function AuthPage() {
             {isLogin ? (
               <form onSubmit={handleLoginSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="username">Nom d'utilisateur</Label>
                   <Input 
-                    id="email"
-                    type="email" 
-                    placeholder="vous@example.com" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="username"
+                    type="text" 
+                    placeholder="votre_nom_utilisateur" 
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     required
                   />
                 </div>
@@ -129,6 +129,17 @@ export default function AuthPage() {
               </form>
             ) : (
               <form onSubmit={handleRegisterSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="register-username">Nom d'utilisateur</Label>
+                  <Input 
+                    id="register-username"
+                    type="text" 
+                    placeholder="votre_nom_utilisateur" 
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="register-email">Email</Label>
                   <Input 
@@ -180,16 +191,15 @@ export default function AuthPage() {
               </div>
             </div>
 
-            <Button
+            {/* Cette fonctionnalité sera réimplémentée ultérieurement */}
+            {/* <Button
               type="button"
               variant="outline"
               className="w-full"
-              onClick={handleGoogleSignIn}
               disabled={isLoading}
             >
-              <FcGoogle className="mr-2 h-5 w-5" />
               Google
-            </Button>
+            </Button> */}
           </CardContent>
           <CardFooter className="flex justify-center">
             <Button
