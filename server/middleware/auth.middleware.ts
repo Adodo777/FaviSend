@@ -1,51 +1,80 @@
 import { Request, Response, NextFunction } from 'express';
-import { storage } from '../storage';
-import { verifyIdToken } from '../services/firebase';
+import { authService } from '../services/auth.service';
+import { User } from '../models';
 
-// Extend Express Request to include user
+// Extension de l'interface Request pour inclure l'utilisateur
 declare global {
-  namespace Express {
-    interface Request {
-      user?: any;
-      token?: string;
+    namespace Express {
+        interface Request {
+            user?: any;
+            token?: string;
+        }
     }
-  }
 }
 
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    // Get the authorization header
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'Unauthorized - No Bearer token provided' });
-    }
+    try {
+        // Récupérer le token d'authentification de l'en-tête
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ message: 'Accès non autorisé' });
+        }
 
-    // Extract the token
-    const token = authHeader.split(' ')[1];
-    
-    if (!token) {
-      return res.status(401).json({ message: 'Unauthorized - Invalid token format' });
-    }
+        // Extraire le token
+        const token = authHeader.split(' ')[1];
+        
+        // Vérifier le token
+        const { valid, userId } = authService.verifyToken(token);
+        if (!valid || !userId) {
+            return res.status(401).json({ message: 'Token invalide ou expiré' });
+        }
 
-    // Verify the Firebase token
-    const decodedToken = await verifyIdToken(token);
-    if (!decodedToken) {
-      return res.status(401).json({ message: 'Unauthorized - Invalid token' });
-    }
+        // Récupérer l'utilisateur depuis la base de données
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(401).json({ message: 'Utilisateur non trouvé' });
+        }
 
-    // Get the user from the database using Firebase UID
-    const user = await storage.getUserByFirebaseUid(decodedToken.uid);
-    if (!user) {
-      return res.status(401).json({ message: 'Unauthorized - User not found' });
-    }
+        // Attacher l'utilisateur et le token à l'objet request
+        req.user = user;
+        req.token = token;
 
-    // Add user and token to the request
-    req.user = user;
-    req.token = token;
-    
-    next();
-  } catch (error) {
-    console.error('Auth middleware error:', error);
-    res.status(500).json({ message: 'Internal server error during authentication' });
-  }
+        next();
+    } catch (error) {
+        console.error('Erreur d\'authentification:', error);
+        res.status(500).json({ message: 'Erreur interne du serveur' });
+    }
+};
+
+// Middleware pour vérifier si un utilisateur est connecté, mais continue même si non
+export const optionalAuthMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        // Récupérer le token d'authentification de l'en-tête
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return next(); // Continue sans utilisateur authentifié
+        }
+
+        // Extraire le token
+        const token = authHeader.split(' ')[1];
+        
+        // Vérifier le token
+        const { valid, userId } = authService.verifyToken(token);
+        if (!valid || !userId) {
+            return next(); // Continue sans utilisateur authentifié
+        }
+
+        // Récupérer l'utilisateur depuis la base de données
+        const user = await User.findById(userId);
+        if (user) {
+            // Attacher l'utilisateur et le token à l'objet request
+            req.user = user;
+            req.token = token;
+        }
+
+        next();
+    } catch (error) {
+        // En cas d'erreur, continuez simplement sans utilisateur authentifié
+        next();
+    }
 };
