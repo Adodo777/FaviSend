@@ -1,0 +1,52 @@
+Je veux créer un SaaS appelé **FaviSend**, une plateforme ultra simple de partage de fichiers rémunéré. Voici les exigences :
+
+---
+
+🎯 **Fonctionnalité principale :**
+- L'utilisateur **upload un fichier**, et reçoit immédiatement **un lien de partage unique**.
+- À chaque **téléchargement du fichier**, il gagne **500F CFA**.
+- Le montant est **fixe pour tous les fichiers de la plateforme**.
+
+---
+
+🧑‍💻 **Technologies souhaitées :**
+- **Frontend** : React.js + Tailwind CSS + DaisyUI
+- **Backend** : Node.js + Express
+- **Base de données** : MongoDB
+- **Auth & storage** : Firebase (authentification par email, stockage des fichiers dans Firebase Storage)
+- **Mobile-first design** : Interface fluide, minimaliste, avec des **cards stylées animées** et **dashboard responsive**
+
+---
+
+🧩 **Pages à générer :**
+1. **Landing Page** avec une phrase d’accroche, bouton “Uploader un fichier”, design jeune et animé.
+2. **Dashboard utilisateur** avec :
+   - Liste des fichiers uploadés
+   - Nombre de téléchargements
+   - Cagnotte en temps réel
+3. **Page publique du lien** (qu’on partage) avec :
+   - Titre du fichier, description (optionnelle)
+   - Bouton “Télécharger (500F)”
+   - Nombre de téléchargements
+   - Champ commentaire / note
+4. **Page d’exploration publique** des fichiers populaires, notés, récents, etc.
+5. **Système d'authentification par email** (Firebase)
+
+---
+
+📱 **UI / UX attendue :**
+- Design **jeune, dynamique, local**, inspiré de l’univers des apps modernes (Snapchat, TikTok, etc.)
+- Utilisation d'animations, cards, icônes dynamiques
+- **Interface très rapide**, centrée sur **mobile** (progressive app friendly)
+
+---
+
+💰 **Modèle économique :**
+- Le téléchargement coûte 500F CFA fixe.
+- Le créateur touche 450F (commission de 50F retenue).
+- Paiement prévu via Mobile Money (intégration à venir, simuler d’abord)
+
+---
+
+Génère-moi une première version MVP fonctionnelle, avec une bonne structure de projet. Je veux pouvoir tester l’upload, la génération du lien, l’auth Firebase et la visualisation publique.
+
