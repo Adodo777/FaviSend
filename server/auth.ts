@@ -1,8 +1,8 @@
 import session from 'express-session';
-import { Express, Request } from 'express';
+import { Express, Request, Response, NextFunction } from 'express';
 import { User } from './models';
 import bcrypt from 'bcrypt';
-import { MongoStore } from 'connect-mongo';
+import MongoStore from 'connect-mongo';
 import mongoose from 'mongoose';
 
 declare global {
@@ -21,6 +21,13 @@ declare global {
     interface Request {
       user?: Express.User;
     }
+  }
+}
+
+// Étendre l'interface Session pour inclure userId
+declare module 'express-session' {
+  interface SessionData {
+    userId?: string;
   }
 }
 
@@ -175,21 +182,22 @@ export function setupAuth(app: Express) {
   });
 
   // Middleware pour charger l'utilisateur dans req.user pour les autres routes
-  app.use(async (req: Request, res: Response, next: NextFunction) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     if (!req.session.userId) {
       return next();
     }
 
-    try {
-      const user = await User.findById(req.session.userId);
-      if (user) {
-        const userObject = user.toObject();
-        delete userObject.password;
-        req.user = userObject;
-      }
-      next();
-    } catch (error) {
-      next();
-    }
+    User.findById(req.session.userId)
+      .then(user => {
+        if (user) {
+          const userObject = user.toObject();
+          delete userObject.password;
+          req.user = userObject;
+        }
+        next();
+      })
+      .catch(error => {
+        next();
+      });
   });
 }

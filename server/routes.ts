@@ -3,13 +3,13 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { fileController } from "./controllers/file.controller";
 import { userController } from "./controllers/user.controller";
-import { authController } from "./controllers/auth.controller";
-import { authMiddleware, optionalAuthMiddleware } from "./middleware/auth.middleware";
 import { uploadMiddleware } from "./middleware/upload.middleware";
 import { connectToMongoDB } from "./models";
 import multer from "multer";
 import path from "path";
 import { log } from "./vite";
+import { setupAuth } from "./auth";
+import { NextFunction, Request, Response } from "express";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialisation de la connexion MongoDB - gérée dans la fonction connectToMongoDB
@@ -37,11 +37,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   });
 
-  // Routes d'authentification
-  app.post("/api/auth/register", authController.register);
-  app.post("/api/auth/login", authController.login);
-  app.post("/api/auth/logout", authController.logout);
-  app.get("/api/auth/user", authMiddleware, authController.getCurrentUser);
+  // Configuration de l'authentification avec sessions
+  setupAuth(app);
+
+  // Middleware de vérification d'authentification
+  const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Accès non autorisé' });
+    }
+    next();
+  };
+
+  // Middleware d'authentification optionnelle
+  const optionalAuthMiddleware = (req: Request, res: Response, next: NextFunction) => {
+    // L'utilisateur est déjà attaché à req via le middleware setupAuth, donc on continue simplement
+    next();
+  };
 
   // User routes
   app.get("/api/users/current", authMiddleware, userController.getCurrentUser);
