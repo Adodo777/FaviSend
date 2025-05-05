@@ -12,6 +12,7 @@ import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
 import Explore from "@/pages/explore";
 import File from "@/pages/file";
+import Auth from "@/pages/auth";
 import { useIsMobile } from "./hooks/use-mobile";
 
 function Router() {
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard}/>
       <Route path="/explore" component={Explore}/>
       <Route path="/file/:id" component={File}/>
+      <Route path="/auth" component={Auth}/>
       <Route component={NotFound} />
     </Switch>
   );
