@@ -59,20 +59,22 @@ export default function Navbar() {
               </DropdownMenu>
             ) : (
               <>
+                <Link href="/auth">
                 <Button 
                   variant="outline" 
                   className="px-4 py-2 rounded-md bg-white text-primary border border-primary font-medium text-sm hover:bg-primary/5 transition-colors"
-                  onClick={() => signInWithGoogle()}
                 >
                   Se connecter
                 </Button>
+              </Link>
                 
+              <Link href="/auth">
                 <Button
                   className="px-4 py-2 rounded-md bg-primary text-white font-medium text-sm hover:bg-primary/90 transition-colors"
-                  onClick={() => signInWithGoogle()}
                 >
                   S'inscrire
                 </Button>
+              </Link>
               </>
             )}
           </div>
@@ -114,19 +116,21 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <Button
-                variant="outline"
-                className="w-full mt-2 px-4 py-2 rounded-md text-primary border border-primary font-medium text-sm hover:bg-primary/5 transition-colors"
-                onClick={() => signInWithGoogle()}
-              >
-                Se connecter
-              </Button>
-              <Button
-                className="w-full mt-2 px-4 py-2 rounded-md bg-primary text-white font-medium text-sm hover:bg-primary/90 transition-colors"
-                onClick={() => signInWithGoogle()}
-              >
-                S'inscrire
-              </Button>
+              <Link href="/auth" className="w-full">
+                <Button
+                  variant="outline"
+                  className="w-full mt-2 px-4 py-2 rounded-md text-primary border border-primary font-medium text-sm hover:bg-primary/5 transition-colors"
+                >
+                  Se connecter
+                </Button>
+              </Link>
+              <Link href="/auth" className="w-full">
+                <Button
+                  className="w-full mt-2 px-4 py-2 rounded-md bg-primary text-white font-medium text-sm hover:bg-primary/90 transition-colors"
+                >
+                  S'inscrire
+                </Button>
+              </Link>
             </>
           )}
         </div>
