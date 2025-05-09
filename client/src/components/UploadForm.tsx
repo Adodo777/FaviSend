@@ -3,8 +3,6 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/lib/auth";
-import { storage } from "@/lib/firebase";
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import { useToast } from "@/hooks/use-toast";
 import { Icons } from "@/assets/icons";
 import { Button } from "@/components/ui/button";
@@ -165,38 +163,51 @@ export default function UploadForm({ onSuccess }: UploadFormProps) {
     setFile(droppedFile);
   };
 
-  const uploadFileToFirebase = async () => {
+  const uploadFileToServer = async () => {
     if (!file || !user) return null;
     
     setIsUploading(true);
     setUploadProgress(0);
     
-    // Create a reference to the file in Firebase Storage
-    const fileExtension = file.name.split('.').pop();
-    const storageRef = ref(storage, `uploads/${user.uid}/${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExtension}`);
+    // Create a FormData object to send the file
+    const formData = new FormData();
+    formData.append('file', file);
     
-    // Upload the file
-    const uploadTask = uploadBytesResumable(storageRef, file);
-    
-    return new Promise<string>((resolve, reject) => {
-      uploadTask.on(
-        'state_changed',
-        (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+    try {
+      // Track upload progress
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/upload', true);
+      
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const progress = (event.loaded / event.total) * 100;
           setUploadProgress(progress);
-        },
-        (error) => {
-          setIsUploading(false);
-          reject(error);
-        },
-        async () => {
-          // Upload completed successfully, get the download URL
-          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          setIsUploading(false);
-          resolve(downloadURL);
         }
-      );
-    });
+      };
+      
+      return new Promise<string>((resolve, reject) => {
+        xhr.onload = function() {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const response = JSON.parse(xhr.responseText);
+            setIsUploading(false);
+            resolve(response.fileUrl);
+          } else {
+            setIsUploading(false);
+            reject(new Error('Upload failed'));
+          }
+        };
+        
+        xhr.onerror = function() {
+          setIsUploading(false);
+          reject(new Error('Upload failed'));
+        };
+        
+        xhr.send(formData);
+      });
+    } catch (error) {
+      setIsUploading(false);
+      throw error;
+    }
   };
 
   const onSubmit = async (values: UploadFormValues) => {
@@ -206,8 +217,8 @@ export default function UploadForm({ onSuccess }: UploadFormProps) {
     }
     
     try {
-      // First upload the file to Firebase Storage
-      const downloadURL = await uploadFileToFirebase();
+      // Upload the file to our server
+      const downloadURL = await uploadFileToServer();
       
       if (!downloadURL) {
         throw new Error("Erreur lors de l'upload du fichier.");

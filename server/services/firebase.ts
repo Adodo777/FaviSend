@@ -13,7 +13,7 @@ export const initializeFirebaseAdmin = () => {
           ? cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)) 
           : undefined,
         projectId: process.env.VITE_FIREBASE_PROJECT_ID,
-        storageBucket: `${process.env.VITE_FIREBASE_PROJECT_ID}.appspot.com`
+        storageBucket: `${process.env.VITE_FIREBASE_PROJECT_ID}.firebasestorage.app`
       });
       console.log('Firebase Admin SDK initialized');
     } catch (error) {

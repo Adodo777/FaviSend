@@ -7,6 +7,7 @@ import { uploadMiddleware } from "./middleware/upload.middleware";
 import { connectToMongoDB } from "./models";
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 import { log } from "./vite";
 import { setupAuth } from "./auth";
 import { NextFunction, Request, Response } from "express";
@@ -58,6 +59,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users/current", authMiddleware, userController.getCurrentUser);
 
   // File routes
+  app.post("/api/upload", authMiddleware, uploadMiddleware.single("file"), (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded' });
+      }
+      
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}-${req.file.originalname}`;
+      const uploadDir = path.join(process.cwd(), 'uploads');
+      
+      // Ensure the uploads directory exists
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      
+      const filePath = path.join(uploadDir, fileName);
+      
+      // Move the file from temp location to final destination
+      if (fs.existsSync(req.file.path)) {
+        fs.renameSync(req.file.path, filePath);
+      }
+      
+      // Create a URL for the uploaded file
+      const fileUrl = `/uploads/${fileName}`;
+      
+      res.status(201).json({ 
+        fileUrl,
+        fileName: req.file.originalname,
+        fileSize: req.file.size,
+        fileType: req.file.mimetype
+      });
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      res.status(500).json({ message: 'Failed to upload file', error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+  
   app.post("/api/files", authMiddleware, uploadMiddleware.single("file"), fileController.createFile);
   app.get("/api/files", optionalAuthMiddleware, fileController.getFiles);
   app.get("/api/files/user", authMiddleware, fileController.getUserFiles);

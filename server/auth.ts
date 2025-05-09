@@ -17,7 +17,7 @@ declare global {
       createdAt: Date;
       updatedAt: Date;
     }
-    
+
     interface Request {
       user?: Express.User;
     }
@@ -41,11 +41,16 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
-  const sessionStore = new MongoStore({
+  // Vérifiez que la connexion MongoDB est active
+  if (!mongoose.connection.readyState) {
+    throw new Error('La connexion à MongoDB n\'est pas active. Assurez-vous que connectToMongoDB() a été appelé.');
+  }
+
+  const sessionStore = MongoStore.create({
     client: mongoose.connection.getClient(),
     collectionName: 'sessions',
     stringify: false,
-    ttl: 14 * 24 * 60 * 60 // 14 jours
+    ttl: 14 * 24 * 60 * 60, // 14 jours
   });
 
   const sessionSettings: session.SessionOptions = {
@@ -57,8 +62,8 @@ export function setupAuth(app: Express) {
       maxAge: 1000 * 60 * 60 * 24 * 14, // 14 jours
       httpOnly: true,
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production'
-    }
+      secure: process.env.NODE_ENV === 'production',
+    },
   };
 
   app.use(session(sessionSettings));
@@ -73,7 +78,7 @@ export function setupAuth(app: Express) {
 
       // Vérifier si l'utilisateur existe déjà
       const existingUser = await User.findOne({
-        $or: [{ email }, { username }]
+        $or: [{ email }, { username }],
       });
 
       if (existingUser) {
@@ -92,7 +97,7 @@ export function setupAuth(app: Express) {
         photoURL: null,
         balance: 0,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
 
       await newUser.save();
@@ -121,7 +126,7 @@ export function setupAuth(app: Express) {
 
       // Trouver l'utilisateur par nom d'utilisateur ou email
       const user = await User.findOne({
-        $or: [{ username }, { email: username }]
+        $or: [{ username }, { email: username }],
       });
 
       if (!user) {
@@ -188,7 +193,7 @@ export function setupAuth(app: Express) {
     }
 
     User.findById(req.session.userId)
-      .then(user => {
+      .then((user) => {
         if (user) {
           const userObject = user.toObject();
           delete userObject.password;
@@ -196,7 +201,8 @@ export function setupAuth(app: Express) {
         }
         next();
       })
-      .catch(error => {
+      .catch((error) => {
+        console.error('Erreur lors du chargement de l\'utilisateur:', error);
         next();
       });
   });

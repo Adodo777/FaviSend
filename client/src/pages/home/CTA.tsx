@@ -4,14 +4,14 @@ import { Icons } from "@/assets/icons";
 import { useLocation } from "wouter";
 
 export default function CTA() {
-  const { user, signInWithGoogle } = useAuth();
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
 
   const handleGetStarted = () => {
     if (user) {
       setLocation("/dashboard?upload=true");
     } else {
-      signInWithGoogle();
+      setLocation("/auth");
     }
   };
 

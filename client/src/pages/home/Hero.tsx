@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth";
 import UploadForm from "@/components/UploadForm";
 
 export default function Hero() {
-  const { user, signInWithGoogle } = useAuth();
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
   const [showUploadForm, setShowUploadForm] = useState(false);
 
@@ -14,7 +14,8 @@ export default function Hero() {
     if (user) {
       setShowUploadForm(true);
     } else {
-      signInWithGoogle();
+      // Redirige vers la page d'authentification au lieu d'utiliser Google
+      setLocation("/auth");
     }
   };
 

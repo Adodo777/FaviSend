@@ -4,8 +4,6 @@ import { insertFileSchema, insertCommentSchema } from '@shared/schema';
 import { generateUniqueId } from '../utils';
 import path from 'path';
 import fs from 'fs';
-import { getFirebaseStorage } from '../services/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export const fileController = {
   // Create a new file
@@ -17,31 +15,52 @@ export const fileController = {
         return res.status(400).json({ message: 'Invalid file data', errors: validation.error.errors });
       }
 
-      const userId = req.user?.id;
+      const userId = req.user?._id;
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
 
       // Check if there's a file attachment from multer
       if (req.file) {
-        // Upload to Firebase Storage if file is available
-        const storageRef = ref(getFirebaseStorage(), `uploads/${userId}/${Date.now()}-${req.file.originalname}`);
-        const fileBuffer = fs.readFileSync(req.file.path);
-        const snapshot = await uploadBytes(storageRef, fileBuffer);
-        const downloadUrl = await getDownloadURL(snapshot.ref);
-
-        // Remove temp file
-        fs.unlinkSync(req.file.path);
-
-        // Use the Firebase download URL
+        // Use local file storage
+        const uploadDir = path.join(process.cwd(), 'uploads');
+        
+        // Ensure the uploads directory exists
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        
+        // Create a unique filename for storage
+        const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}-${req.file.originalname}`;
+        const filePath = path.join(uploadDir, uniqueFileName);
+        
+        // If the file was moved by multer, just rename it, otherwise copy it
+        if (fs.existsSync(req.file.path)) {
+          fs.renameSync(req.file.path, filePath);
+        }
+        
+        // Generate a URL relative to the server
+        const downloadUrl = `/uploads/${uniqueFileName}`;
+        
+        // Add file details to the request body
         req.body.downloadUrl = downloadUrl;
         req.body.fileName = req.file.originalname;
         req.body.fileSize = req.file.size;
         req.body.fileType = req.file.mimetype;
       }
 
-      // Create file in database
-      const file = await storage.createFile(validation.data, userId);
+      // Save file details in the database
+      const fileData = {
+        ...validation.data,
+        userId,
+        downloadUrl: req.body.downloadUrl,
+        fileName: req.body.fileName,
+        fileSize: req.body.fileSize,
+        fileType: req.body.fileType,
+        createdAt: new Date(),
+      };
+
+      const file = await storage.createFile(fileData, userId);
       res.status(201).json(file);
     } catch (error) {
       console.error('Error creating file:', error);
@@ -95,7 +114,7 @@ export const fileController = {
   // Get files for the current user
   async getUserFiles(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?._id;
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
@@ -160,7 +179,7 @@ export const fileController = {
   async downloadFile(req: Request, res: Response) {
     try {
       const shareUrl = req.params.shareUrl;
-      const userId = req.user?.id;
+      const userId = req.user?._id;
 
       const file = await storage.getFileByShareUrl(shareUrl);
       if (!file) {
@@ -188,7 +207,7 @@ export const fileController = {
   async deleteFile(req: Request, res: Response) {
     try {
       const fileId = parseInt(req.params.id);
-      const userId = req.user?.id;
+      const userId = req.user?._id;
 
       const file = await storage.getFile(fileId);
       if (!file) {
@@ -212,7 +231,7 @@ export const fileController = {
   // Add a comment to a file
   async addComment(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?._id;
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
       }

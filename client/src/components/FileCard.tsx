@@ -65,7 +65,7 @@ export default function FileCard({ file }: FileCardProps) {
                 {file.title}
               </h3>
               <p className="text-xs text-gray-500">
-                Par {file.user.displayName || "Utilisateur anonyme"}
+                Par {file.user?.displayName || "Utilisateur anonyme"}
               </p>
             </div>
           </div>

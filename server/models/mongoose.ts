@@ -71,8 +71,13 @@ export const Payment = mongoose.model('Payment', paymentSchema);
 // Fonction d'initialisation de MongoDB
 export async function connectToMongoDB(): Promise<void> {
   try {
-    const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/favisend';
-    await mongoose.connect(mongoURI);
+    const mongoURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/favisend';
+    await mongoose.connect(mongoURI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      useCreateIndex: true,
+      useFindAndModify: false
+    });
     console.log('Connecté à MongoDB');
   } catch (error) {
     console.error('Erreur de connexion à MongoDB:', error);

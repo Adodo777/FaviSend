@@ -5,14 +5,14 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 
 export default function Features() {
-  const { user, signInWithGoogle } = useAuth();
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
 
   const handleUploadClick = () => {
     if (user) {
       setLocation("/dashboard?upload=true");
     } else {
-      signInWithGoogle();
+      setLocation("/auth");
     }
   };
 

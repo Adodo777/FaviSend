@@ -84,8 +84,8 @@ export const Payment = mongoose.models.Payment || mongoose.model('Payment', paym
 
 // Connection à MongoDB
 export async function connectToMongoDB() {
-  // Utilisation de MongoMemoryServer pour le développement par défaut dans Replit
-  if (process.env.NODE_ENV === 'development' || !process.env.MONGODB_URI) {
+  // Utilisation de MongoMemoryServer uniquement si explicitement demandé
+  if (process.env.USE_MEMORY_DB === 'true') {
     try {
       console.log('Initialisation de la base de données MongoDB en mémoire...');
       
@@ -109,14 +109,17 @@ export async function connectToMongoDB() {
     }
   }
 
-  // Pour la production, on utilise l'URI MongoDB fourni
+  // Pour la production ou le développement classique, on utilise l'URI MongoDB fourni
   try {
     const mongoURI = process.env.MONGODB_URI as string;
+    if (!mongoURI) {
+      throw new Error('MONGODB_URI non défini dans les variables d\'environnement');
+    }
     await mongoose.connect(mongoURI);
-    console.log('Connecté à MongoDB (production)');
+    console.log('Connecté à MongoDB (production ou développement classique)');
     return mongoose.connection;
   } catch (error) {
-    console.error('Erreur de connexion à MongoDB (production):', error);
+    console.error('Erreur de connexion à MongoDB (production ou développement classique):', error);
     throw error; // Ré-émission de l'erreur pour la gestion en amont
   }
 }

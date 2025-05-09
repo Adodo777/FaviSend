@@ -19,7 +19,7 @@ import FileDetail from "@/components/FileDetail";
 export default function File() {
   const [, params] = useRoute<{ id: string }>("/file/:id");
   const [, setLocation] = useLocation();
-  const { user, signInWithGoogle } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [comment, setComment] = useState("");
   const [rating, setRating] = useState(0);
@@ -92,11 +92,12 @@ export default function File() {
     if (user) {
       downloadMutation.mutate(fileData.shareUrl);
     } else {
-      // Prompt for login before download
-      const shouldLogin = window.confirm("Vous devez être connecté pour télécharger ce fichier. Voulez-vous vous connecter maintenant?");
-      if (shouldLogin) {
-        signInWithGoogle();
-      }
+      // Rediriger vers la page d'authentification
+      toast({
+        title: "Connexion requise",
+        description: "Vous devez être connecté pour télécharger ce fichier."
+      });
+      setLocation("/auth");
     }
   };
 
@@ -111,11 +112,12 @@ export default function File() {
         rating
       });
     } else {
-      // Prompt for login before commenting
-      const shouldLogin = window.confirm("Vous devez être connecté pour laisser un commentaire. Voulez-vous vous connecter maintenant?");
-      if (shouldLogin) {
-        signInWithGoogle();
-      }
+      // Rediriger vers la page d'authentification
+      toast({
+        title: "Connexion requise",
+        description: "Vous devez être connecté pour laisser un commentaire."
+      });
+      setLocation("/auth");
     }
   };
 
